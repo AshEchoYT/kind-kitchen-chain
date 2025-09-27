@@ -1,42 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* FoodShare Design System - Swiggy Inspired */
 
 @layer base {
   :root {
+    /* Core Brand Colors */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
+    --foreground: 0 0% 15%;
+    
+    /* Brand Orange (Swiggy inspired) */
+    --primary: 24 100% 55%; /* #FC8019 */
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 24 100% 85%;
+    --primary-dark: 24 100% 45%;
+    
+    /* Secondary Colors */
+    --secondary: 210 17% 92%;
+    --secondary-foreground: 0 0% 15%;
+    --secondary-dark: 210 15% 25%;
+    
+    /* Surface Colors */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
+    --card-foreground: 0 0% 15%;
+    --card-hover: 0 0% 98%;
+    
+    /* Interactive Colors */
+    --accent: 142 71% 45%; /* Green for success */
+    --accent-foreground: 0 0% 100%;
+    --accent-light: 142 71% 85%;
+    
+    /* Status Colors */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 0 0% 15%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Neutral Colors */
+    --muted: 210 17% 96%;
+    --muted-foreground: 0 0% 45%;
+    --border: 210 17% 90%;
+    --input: 210 17% 95%;
+    --ring: 24 100% 55%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(24 100% 55%), hsl(24 100% 45%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 17% 98%));
+    --gradient-hero: linear-gradient(135deg, hsl(24 100% 55%) 0%, hsl(24 100% 45%) 100%);
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --shadow-orange: 0 10px 25px -5px rgba(252, 128, 25, 0.3);
+    
+    /* Spacing & Layout */
+    --radius: 0.75rem;
+    --radius-sm: 0.5rem;
+    --radius-lg: 1rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -100,6 +126,133 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-inter;
   }
+}
+
+@layer components {
+  /* Swiggy-style Components */
+  .food-card {
+    @apply bg-card rounded-lg border border-border shadow-sm hover:shadow-md transition-all duration-300;
+    @apply hover:scale-[1.02] cursor-pointer;
+  }
+  
+  .food-card-image {
+    @apply w-full h-40 object-cover rounded-t-lg;
+  }
+  
+  .badge-veg {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+    @apply bg-green-100 text-green-800 border border-green-200;
+  }
+  
+  .badge-non-veg {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+    @apply bg-red-100 text-red-800 border border-red-200;
+  }
+  
+  .badge-status-new {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+    @apply bg-blue-100 text-blue-800 border border-blue-200;
+  }
+  
+  .badge-status-assigned {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+    @apply bg-yellow-100 text-yellow-800 border border-yellow-200;
+  }
+  
+  .badge-status-picked {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+    @apply bg-orange-100 text-orange-800 border border-orange-200;
+  }
+  
+  .badge-status-delivered {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+    @apply bg-green-100 text-green-800 border border-green-200;
+  }
+  
+  .swiggy-button {
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-300;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .swiggy-button-primary {
+    @apply swiggy-button bg-primary text-primary-foreground hover:bg-primary/90;
+    @apply shadow-md hover:shadow-lg focus:ring-primary;
+  }
+  
+  .swiggy-button-secondary {
+    @apply swiggy-button bg-secondary text-secondary-foreground hover:bg-secondary/80;
+    @apply border border-border focus:ring-secondary;
+  }
+  
+  .swiggy-nav {
+    @apply bg-white border-b border-border shadow-sm sticky top-0 z-50;
+  }
+  
+  .swiggy-search {
+    @apply flex items-center bg-muted rounded-lg px-4 py-3;
+    @apply border border-transparent focus-within:border-primary focus-within:bg-white;
+    @apply transition-all duration-300;
+  }
+  
+  .location-selector {
+    @apply flex items-center gap-2 px-4 py-2 bg-muted rounded-lg;
+    @apply hover:bg-muted/80 transition-colors cursor-pointer;
+  }
+  
+  .category-chip {
+    @apply px-4 py-2 rounded-full border text-sm font-medium;
+    @apply bg-white border-border text-foreground hover:border-primary;
+    @apply transition-all duration-300 cursor-pointer;
+  }
+  
+  .category-chip.active {
+    @apply bg-primary text-primary-foreground border-primary;
+  }
+}
+
+@layer utilities {
+  .font-inter {
+    font-family: 'Inter', sans-serif;
+  }
+  
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+  
+  .shadow-orange {
+    box-shadow: var(--shadow-orange);
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
