@@ -324,16 +324,6 @@ const Index = () => {
             </div>
             <p className="text-gray-400 mb-2 text-lg">எல்லருக்கும் உணவு - Food for Everyone</p>
             <p className="text-gray-500 mb-4">Made with ❤️ for Tamil Nadu | Reducing food waste, fighting hunger</p>
-            
-            {/* Admin Setup Link - Small and discrete */}
-            <div className="mt-6 pt-4 border-t border-gray-800">
-              <button
-                onClick={() => navigate('/admin-setup')}
-                className="text-xs text-gray-600 hover:text-gray-400 transition-colors duration-200"
-              >
-                Platform Setup
-              </button>
-            </div>
           </div>
         </div>
       </footer>

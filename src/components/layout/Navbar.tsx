@@ -3,6 +3,7 @@ import { Search, MapPin, User, Menu, Bell, Settings, LogOut, Home, Heart, Sparkl
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import CityDropdown from '@/components/ui/CityDropdown';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,10 +58,7 @@ const Navbar = () => {
               <Home className="h-4 w-4 mr-2" />
               Home
             </Button>
-            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted transition-colors duration-300">
-              <MapPin className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Tamil Nadu</span>
-            </div>
+            <CityDropdown />
           </div>
 
           {/* Right Side Actions */}
@@ -72,12 +70,12 @@ const Navbar = () => {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="relative hover:bg-primary/10 transition-all duration-300 hover:scale-110"
+                    className="relative hover:bg-primary/10 transition-all duration-300 hover:scale-110 bg-white/50 border border-gray-200/50"
                   >
                     <Bell className="h-4 w-4" />
                     <Badge 
                       variant="destructive" 
-                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs animate-pulse"
+                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs animate-pulse bg-red-500 text-white border-2 border-white"
                     >
                       3
                     </Badge>
@@ -99,14 +97,14 @@ const Navbar = () => {
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-64" align="end" sideOffset={5}>
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{userProfile?.name || 'User'}</p>
-                        <p className="text-xs leading-none text-muted-foreground">
+                  <DropdownMenuContent className="w-64 bg-white/95 backdrop-blur-md border border-gray-200 shadow-xl rounded-lg" align="end" sideOffset={5}>
+                    <DropdownMenuLabel className="font-normal bg-gradient-to-r from-primary/5 to-accent/5 border-b border-gray-100">
+                      <div className="flex flex-col space-y-1 p-2">
+                        <p className="text-sm font-medium leading-none text-gray-800">{userProfile?.name || 'User'}</p>
+                        <p className="text-xs leading-none text-gray-600">
                           {user?.email}
                         </p>
-                        <Badge variant="outline" className="w-fit mt-2 capitalize">
+                        <Badge variant="outline" className="w-fit mt-2 capitalize bg-white border-primary/20 text-primary">
                           {userProfile?.role || 'User'}
                         </Badge>
                       </div>
@@ -114,29 +112,29 @@ const Navbar = () => {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={() => navigate('/dashboard')}
-                      className="hover:bg-primary/10 cursor-pointer"
+                      className="hover:bg-primary/10 cursor-pointer text-gray-700 hover:text-gray-900 transition-colors"
                     >
                       <Home className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => navigate('/profile')}
-                      className="hover:bg-primary/10 cursor-pointer"
+                      className="hover:bg-primary/10 cursor-pointer text-gray-700 hover:text-gray-900 transition-colors"
                     >
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile Settings</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => navigate('/settings')}
-                      className="hover:bg-primary/10 cursor-pointer"
+                      className="hover:bg-primary/10 cursor-pointer text-gray-700 hover:text-gray-900 transition-colors"
                     >
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="bg-gray-200" />
                     <DropdownMenuItem 
                       onClick={handleSignOut}
-                      className="hover:bg-destructive/10 text-destructive cursor-pointer"
+                      className="hover:bg-red-50 text-red-600 hover:text-red-700 cursor-pointer transition-colors"
                     >
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Sign out</span>

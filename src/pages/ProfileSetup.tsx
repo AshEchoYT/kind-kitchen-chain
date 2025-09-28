@@ -8,20 +8,11 @@ import { Slider } from "@/components/ui/slider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MapPin, Navigation, Building, Truck, CheckCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCity } from '@/contexts/CityContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-
-// Tamil Nadu Districts and Major Cities
-const tamilNaduAreas = [
-  'Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem', 'Tirunelveli',
-  'Tiruppur', 'Vellore', 'Thoothukudi', 'Dindigul', 'Thanjavur', 'Ranipet',
-  'Sivaganga', 'Karur', 'Udhagamandalam', 'Hosur', 'Tambaram', 'Avadi',
-  'Tirupathur', 'Erode', 'Nagercoil', 'Theni', 'Pollachi', 'Rajapalayam',
-  'Sivakasi', 'Pudukkottai', 'Neyveli', 'Nagapattinam', 'Viluppuram',
-  'Tiruvallur', 'Kancheepuram', 'Kanyakumari', 'Dharmapuri', 'Namakkal',
-  'Cuddalore', 'Krishnagiri', 'Perambalur', 'Ariyalur', 'Kalakurichi',
-  'Tiruvannamalai', 'Nilgiris', 'Tenkasi'
-];
+import { tamilNaduAreas } from '@/constants/tamilNadu';
+import Navbar from '@/components/layout/Navbar';
 
 const ProfileSetup = () => {
   const [loading, setLoading] = useState(false);
@@ -29,11 +20,12 @@ const ProfileSetup = () => {
   const [error, setError] = useState('');
   const [step, setStep] = useState(1);
   const { user } = useAuth();
+  const { selectedCity, setSelectedCity } = useCity();
   const navigate = useNavigate();
 
   const [profileData, setProfileData] = useState({
     address: '',
-    city: '',
+    city: selectedCity, // Auto-fill with selected city from navbar
     pincode: '',
     latitude: null as number | null,
     longitude: null as number | null,
@@ -49,6 +41,11 @@ const ProfileSetup = () => {
       navigate('/auth');
     }
   }, [user, navigate]);
+
+  // Auto-update city when navbar city changes
+  useEffect(() => {
+    setProfileData(prev => ({ ...prev, city: selectedCity }));
+  }, [selectedCity]);
 
   const getCurrentLocation = async () => {
     setLocationLoading(true);
@@ -191,9 +188,11 @@ const ProfileSetup = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-2xl">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-2xl">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
               Complete Your Profile
@@ -239,7 +238,10 @@ const ProfileSetup = () => {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">City/District in Tamil Nadu</Label>
-                      <Select value={profileData.city} onValueChange={(value) => setProfileData({...profileData, city: value})}>
+                      <Select value={profileData.city} onValueChange={(value) => {
+                        setProfileData({...profileData, city: value});
+                        setSelectedCity(value); // Update global city context
+                      }}>
                         <SelectTrigger className="border-gray-200 focus:border-orange-500">
                           <SelectValue placeholder="Select your city" />
                         </SelectTrigger>
@@ -542,6 +544,7 @@ const ProfileSetup = () => {
         </Card>
       </div>
     </div>
+    </>
   );
 };
 
