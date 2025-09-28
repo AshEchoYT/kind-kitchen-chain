@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Package, Truck, Users, BarChart3, Plus, MapPin, Heart, Sparkles } from 'lucide-react';
+import { Package, Truck, Users, BarChart3, Plus, MapPin, Heart, Sparkles, TrendingUp, Clock, Award } from 'lucide-react';
 import { ProfileSetup } from '@/components/profile/ProfileSetup';
 import { FoodReportForm } from '@/components/food/FoodReportForm';
 import { MapView } from '@/components/map/MapView';
+import Navbar from '@/components/layout/Navbar';
 
-export const Dashboard = () => {
+const Dashboard = () => {
   const { user, userProfile } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -118,10 +119,18 @@ export const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[80vh]">
+          <div className="text-center animate-fade-in-up">
+            <div className="w-16 h-16 relative mx-auto mb-6">
+              <div className="absolute inset-0 rounded-full border-4 border-orange-200"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin"></div>
+              <Heart className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-orange-500 animate-pulse" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Loading Dashboard</h3>
+            <p className="text-gray-600">Please wait while we fetch your data...</p>
+          </div>
         </div>
       </div>
     );
@@ -146,29 +155,54 @@ export const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50">
+      <Navbar />
+      
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold text-foreground text-shadow">
-            {userProfile?.role === 'hotel' && '🏨 Hotel Dashboard'}
-            {userProfile?.role === 'agent' && '🚚 Agent Dashboard'}
-            {userProfile?.role === 'admin' && '⚙️ Admin Dashboard'}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Welcome back, {profileData?.name || userProfile?.name || user?.email}
-          </p>
+        <div className="mb-8 animate-fade-in-up">
+          <div className="flex items-center gap-3 mb-2">
+            {userProfile?.role === 'hotel' && <Heart className="h-8 w-8 text-orange-500 animate-pulse" />}
+            {userProfile?.role === 'agent' && <Truck className="h-8 w-8 text-green-500 animate-pulse" />}
+            {userProfile?.role === 'admin' && <Award className="h-8 w-8 text-purple-500 animate-pulse" />}
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              {userProfile?.role === 'hotel' && 'Hotel Dashboard'}
+              {userProfile?.role === 'agent' && 'Agent Dashboard'}
+              {userProfile?.role === 'admin' && 'Admin Dashboard'}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="capitalize bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 border-orange-300">
+              <Sparkles className="h-3 w-3 mr-1" />
+              {userProfile?.role || 'User'}
+            </Badge>
+            <p className="text-muted-foreground">
+              Welcome back, {profileData?.name || userProfile?.name || user?.email}
+            </p>
+          </div>
         </div>
 
         {/* Quick Actions */}
         {userProfile?.role === 'hotel' && (
-          <div className="mb-6">
-            <Button 
-              onClick={() => setShowFoodForm(!showFoodForm)}
-              className="gradient-hover animate-pulse-glow"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Report Surplus Food
-            </Button>
+          <div className="mb-8 animate-fade-in-up" style={{animationDelay: '0.1s'}}>
+            <Card className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-none shadow-xl hover:shadow-2xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold mb-2">Ready to help?</h3>
+                    <p className="opacity-90">Report surplus food and make a difference</p>
+                  </div>
+                  <Button 
+                    onClick={() => setShowFoodForm(!showFoodForm)}
+                    variant="secondary"
+                    size="lg"
+                    className="bg-white text-orange-600 hover:bg-gray-100 hover:scale-105 transition-all duration-300"
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    Report Food
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -176,11 +210,22 @@ export const Dashboard = () => {
         {showFoodForm && userProfile?.role === 'hotel' && profileData && (
           <div className="mb-8">
             <FoodReportForm 
-              hotelId={profileData.id} 
-              onSuccess={() => {
-                setShowFoodForm(false);
-                fetchDashboardData();
-              }} 
+              hotelId={profileData?.id || ''}
+              open={showFoodForm}
+              onClose={() => setShowFoodForm(false)}
+              onSubmit={async (reportData) => {
+                const { error } = await supabase
+                  .from('food_reports')
+                  .insert({
+                    ...reportData,
+                    hotel_id: profileData.id
+                  });
+                
+                if (!error) {
+                  setShowFoodForm(false);
+                  fetchDashboardData();
+                }
+              }}
             />
           </div>
         )}
@@ -189,33 +234,42 @@ export const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {dashboardData?.role === 'hotel' && (
             <>
-              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300">
+              <Card className="animate-bounce-in bg-white/80 backdrop-blur border-2 hover:shadow-xl hover:scale-105 transition-all duration-300 hover:border-orange-200">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
-                  <Package className="h-4 w-4 text-primary animate-float" />
+                  <CardTitle className="text-sm font-medium text-gray-600">Total Reports</CardTitle>
+                  <div className="p-2 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg">
+                    <Package className="h-5 w-5 text-orange-600 animate-float" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-primary">{dashboardData?.stats?.totalReports}</div>
+                  <div className="text-3xl font-bold text-orange-600 mb-1">{dashboardData?.stats?.totalReports}</div>
+                  <p className="text-xs text-gray-500">Food items reported</p>
                 </CardContent>
               </Card>
               
-              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300" style={{animationDelay: '0.1s'}}>
+              <Card className="animate-bounce-in bg-white/80 backdrop-blur border-2 hover:shadow-xl hover:scale-105 transition-all duration-300 hover:border-yellow-200" style={{animationDelay: '0.1s'}}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Reports</CardTitle>
-                  <Truck className="h-4 w-4 text-warning animate-float" />
+                  <CardTitle className="text-sm font-medium text-gray-600">Active Reports</CardTitle>
+                  <div className="p-2 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg">
+                    <Truck className="h-5 w-5 text-yellow-600 animate-float" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-warning">{dashboardData?.stats?.activeReports}</div>
+                  <div className="text-3xl font-bold text-yellow-600 mb-1">{dashboardData?.stats?.activeReports}</div>
+                  <p className="text-xs text-gray-500">Awaiting pickup</p>
                 </CardContent>
               </Card>
               
-              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300" style={{animationDelay: '0.2s'}}>
+              <Card className="animate-bounce-in bg-white/80 backdrop-blur border-2 hover:shadow-xl hover:scale-105 transition-all duration-300 hover:border-green-200" style={{animationDelay: '0.2s'}}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Completed</CardTitle>
-                  <BarChart3 className="h-4 w-4 text-accent animate-float" />
+                  <CardTitle className="text-sm font-medium text-gray-600">Completed</CardTitle>
+                  <div className="p-2 bg-gradient-to-br from-green-100 to-green-200 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-green-600 animate-float" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-accent">{dashboardData?.stats?.completedReports}</div>
+                  <div className="text-3xl font-bold text-green-600 mb-1">{dashboardData?.stats?.completedReports}</div>
+                  <p className="text-xs text-gray-500">Successfully delivered</p>
                 </CardContent>
               </Card>
             </>
@@ -348,3 +402,5 @@ export const Dashboard = () => {
     </div>
   );
 };
+
+export default Dashboard;

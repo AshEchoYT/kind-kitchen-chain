@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,10 +12,17 @@ import { Clock, Camera, Package } from 'lucide-react';
 
 interface FoodReportFormProps {
   hotelId: string;
-  onSuccess: () => void;
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (reportData: any) => Promise<void>;
 }
 
-export const FoodReportForm: React.FC<FoodReportFormProps> = ({ hotelId, onSuccess }) => {
+export const FoodReportForm: React.FC<FoodReportFormProps> = ({ 
+  hotelId, 
+  open, 
+  onClose, 
+  onSubmit 
+}) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -32,7 +39,7 @@ export const FoodReportForm: React.FC<FoodReportFormProps> = ({ hotelId, onSucce
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('food_reports').insert({
+      const reportData = {
         hotel_id: hotelId,
         food_name: formData.food_name,
         food_type: formData.food_type as 'veg' | 'non_veg' | 'snacks',
@@ -41,14 +48,9 @@ export const FoodReportForm: React.FC<FoodReportFormProps> = ({ hotelId, onSucce
         expiry_time: formData.expiry_time ? new Date(formData.expiry_time).toISOString() : null,
         description: formData.description,
         status: 'new',
-      });
+      };
 
-      if (error) throw error;
-
-      toast({
-        title: "Food Report Created!",
-        description: "Your surplus food has been reported successfully.",
-      });
+      await onSubmit(reportData);
 
       setFormData({
         food_name: '',
@@ -59,7 +61,7 @@ export const FoodReportForm: React.FC<FoodReportFormProps> = ({ hotelId, onSucce
         description: '',
       });
 
-      onSuccess();
+      onClose();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -72,14 +74,15 @@ export const FoodReportForm: React.FC<FoodReportFormProps> = ({ hotelId, onSucce
   };
 
   return (
-    <Card className="animate-slide-up">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Package className="h-5 w-5 text-primary" />
-          Report Surplus Food
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-primary" />
+            Report Surplus Food
+          </DialogTitle>
+        </DialogHeader>
+        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="food_name">Food Name</Label>
@@ -154,15 +157,25 @@ export const FoodReportForm: React.FC<FoodReportFormProps> = ({ hotelId, onSucce
             />
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full gradient-hover"
-            disabled={loading}
-          >
-            {loading ? 'Reporting...' : 'Report Surplus Food'}
-          </Button>
+          <div className="flex gap-2 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onClose}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              className="flex-1 gradient-hover"
+              disabled={loading}
+            >
+              {loading ? 'Reporting...' : 'Report Food'}
+            </Button>
+          </div>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 };
