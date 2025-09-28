@@ -1,55 +1,113 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import Navbar from '@/components/layout/Navbar';
-import BottomNavigation from '@/components/layout/BottomNavigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Utensils, 
-  Package, 
-  MapPin, 
-  Clock, 
-  TrendingUp,
-  Plus,
-  Eye,
-  User,
-  Truck
-} from 'lucide-react';
+import { Package, Truck, Users, BarChart3, Plus, MapPin, Heart, Sparkles } from 'lucide-react';
+import { ProfileSetup } from '@/components/profile/ProfileSetup';
+import { FoodReportForm } from '@/components/food/FoodReportForm';
+import { MapView } from '@/components/map/MapView';
 
-const Dashboard = () => {
+export const Dashboard = () => {
   const { user, userProfile } = useAuth();
-  const navigate = useNavigate();
-  const [dashboardData, setDashboardData] = useState({
-    recentReports: [],
-    stats: {},
-    tasks: []
-  });
+  const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [showFoodForm, setShowFoodForm] = useState(false);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
+    if (user && userProfile) {
+      fetchDashboardData();
+      checkProfileSetup();
     }
-    
-    fetchDashboardData();
   }, [user, userProfile]);
 
-  const fetchDashboardData = async () => {
-    if (!userProfile) return;
+  const checkProfileSetup = async () => {
+    if (!user || !userProfile) return;
 
     try {
-      setLoading(true);
-      
       if (userProfile.role === 'hotel') {
-        await fetchHotelDashboard();
+        const { data } = await supabase
+          .from('hotels')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        setProfileData(data);
+        setNeedsProfileSetup(!data);
       } else if (userProfile.role === 'agent') {
-        await fetchAgentDashboard();
-      } else if (userProfile.role === 'admin') {
-        await fetchAdminDashboard();
+        const { data } = await supabase
+          .from('delivery_agents')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        setProfileData(data);
+        setNeedsProfileSetup(!data);
+      }
+    } catch (error) {
+      console.error('Error checking profile:', error);
+      setNeedsProfileSetup(true);
+    }
+  };
+
+  const fetchDashboardData = async () => {
+    try {
+      if (userProfile?.role === 'hotel') {
+        const { data: reports } = await supabase
+          .from('food_reports')
+          .select('*')
+          .eq('hotel_id', profileData?.id);
+        
+        setDashboardData({
+          role: 'hotel',
+          stats: {
+            totalReports: reports?.length || 0,
+            activeReports: reports?.filter(r => r.status === 'new' || r.status === 'assigned').length || 0,
+            completedReports: reports?.filter(r => r.status === 'delivered').length || 0,
+          },
+          recentReports: reports?.slice(0, 5) || []
+        });
+      } else if (userProfile?.role === 'agent') {
+        const { data: assignments } = await supabase
+          .from('food_reports')
+          .select('*')
+          .eq('assigned_agent_id', profileData?.id);
+        
+        setDashboardData({
+          role: 'agent',
+          stats: {
+            totalAssignments: assignments?.length || 0,
+            pendingPickups: assignments?.filter(r => r.status === 'assigned').length || 0,
+            completedDeliveries: assignments?.filter(r => r.status === 'delivered').length || 0,
+          },
+          assignments: assignments?.slice(0, 5) || []
+        });
+      } else if (userProfile?.role === 'admin') {
+        const { data: allReports } = await supabase
+          .from('food_reports')
+          .select('*');
+        
+        const { data: hotels } = await supabase
+          .from('hotels')
+          .select('*');
+        
+        const { data: agents } = await supabase
+          .from('delivery_agents')
+          .select('*');
+        
+        setDashboardData({
+          role: 'admin',
+          stats: {
+            totalReports: allReports?.length || 0,
+            totalHotels: hotels?.length || 0,
+            totalAgents: agents?.length || 0,
+            activeReports: allReports?.filter(r => r.status === 'new' || r.status === 'assigned').length || 0,
+          },
+          recentActivity: allReports?.slice(0, 10) || []
+        });
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -58,351 +116,235 @@ const Dashboard = () => {
     }
   };
 
-  const fetchHotelDashboard = async () => {
-    // Fetch hotel's food reports
-    const { data: hotel } = await supabase
-      .from('hotels')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!hotel) return;
-
-    const { data: reports } = await supabase
-      .from('food_reports')
-      .select('*')
-      .eq('hotel_id', hotel.id)
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    const { data: stats } = await supabase
-      .from('food_reports')
-      .select('status')
-      .eq('hotel_id', hotel.id);
-
-    const statusCounts = stats?.reduce((acc, report) => {
-      acc[report.status] = (acc[report.status] || 0) + 1;
-      return acc;
-    }, {}) || {};
-
-    setDashboardData({
-      recentReports: reports || [],
-      stats: statusCounts,
-      tasks: []
-    });
-  };
-
-  const fetchAgentDashboard = async () => {
-    // Fetch agent's assigned tasks
-    const { data: agent } = await supabase
-      .from('delivery_agents')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!agent) return;
-
-    const { data: assignedReports } = await supabase
-      .from('food_reports')
-      .select(`
-        *,
-        hotels (name, street, city)
-      `)
-      .eq('assigned_agent_id', agent.id)
-      .in('status', ['assigned', 'picked'])
-      .order('pickup_time', { ascending: true });
-
-    const { data: collections } = await supabase
-      .from('collection_records')
-      .select('*')
-      .eq('assigned_agent_id', agent.id);
-
-    setDashboardData({
-      recentReports: assignedReports || [],
-      stats: {
-        assigned: assignedReports?.filter(r => r.status === 'assigned').length || 0,
-        picked: assignedReports?.filter(r => r.status === 'picked').length || 0,
-        delivered: collections?.filter(c => c.status === 'delivered').length || 0
-      },
-      tasks: assignedReports || []
-    });
-  };
-
-  const fetchAdminDashboard = async () => {
-    // Fetch overall platform statistics
-    const [reportsData, agentsData, hotelsData, distributionsData] = await Promise.all([
-      supabase.from('food_reports').select('*').order('created_at', { ascending: false }).limit(10),
-      supabase.from('delivery_agents').select('*'),
-      supabase.from('hotels').select('*'),
-      supabase.from('distribution_records').select('*')
-    ]);
-
-    setDashboardData({
-      recentReports: reportsData.data || [],
-      stats: {
-        totalReports: reportsData.data?.length || 0,
-        activeAgents: agentsData.data?.filter(a => a.is_active).length || 0,
-        totalHotels: hotelsData.data?.length || 0,
-        totalDistributions: distributionsData.data?.length || 0
-      },
-      tasks: []
-    });
-  };
-
-  if (!user || !userProfile) {
-    return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
-  const getRoleSpecificContent = () => {
-    switch (userProfile.role) {
-      case 'hotel':
-        return (
-          <>
-            <div className="grid md:grid-cols-4 gap-4 mb-8">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {(dashboardData.stats as any)?.new || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">New Reports</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {(dashboardData.stats as any)?.assigned || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Assigned</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {(dashboardData.stats as any)?.picked || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Picked Up</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {(dashboardData.stats as any)?.delivered || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Delivered</div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold">Recent Food Reports</h2>
-              <Button onClick={() => navigate('/reports/new')}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Report
-              </Button>
-            </div>
-          </>
-        );
+  if (needsProfileSetup && (userProfile?.role === 'hotel' || userProfile?.role === 'agent')) {
+    return (
+      <ProfileSetup 
+        role={userProfile.role} 
+        onComplete={() => {
+          setNeedsProfileSetup(false);
+          checkProfileSetup();
+        }} 
+      />
+    );
+  }
 
-      case 'agent':
-        return (
-          <>
-            <div className="grid md:grid-cols-3 gap-4 mb-8">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {(dashboardData.stats as any)?.assigned || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Pending Pickups</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {(dashboardData.stats as any)?.picked || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Ready to Deliver</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {(dashboardData.stats as any)?.delivered || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Completed Today</div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold">Your Tasks</h2>
-              <Button onClick={() => navigate('/map')}>
-                <MapPin className="h-4 w-4 mr-2" />
-                View Map
-              </Button>
-            </div>
-          </>
-        );
-
-      case 'admin':
-        return (
-          <>
-            <div className="grid md:grid-cols-4 gap-4 mb-8">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-primary">
-                    {(dashboardData.stats as any)?.totalReports || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Total Reports</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-accent">
-                    {(dashboardData.stats as any)?.activeAgents || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Active Agents</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-success">
-                    {(dashboardData.stats as any)?.totalHotels || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Registered Hotels</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-warning">
-                    {(dashboardData.stats as any)?.totalDistributions || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Total Distributions</div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold">Recent Activity</h2>
-              <div className="space-x-2">
-                <Button variant="outline" onClick={() => navigate('/admin/users')}>
-                  <User className="h-4 w-4 mr-2" />
-                  Manage Users
-                </Button>
-                <Button onClick={() => navigate('/admin/analytics')}>
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  View Analytics
-                </Button>
-              </div>
-            </div>
-          </>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const colors = {
-      new: 'bg-blue-100 text-blue-800',
-      assigned: 'bg-yellow-100 text-yellow-800',
-      picked: 'bg-orange-100 text-orange-800',
-      delivered: 'bg-green-100 text-green-800',
-      cancelled: 'bg-red-100 text-red-800'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
+  const mockLocations = [
+    { id: '1', name: 'Hotel Paradise', lat: 28.6139, lng: 77.2090, type: 'hotel' as const, address: 'CP, Delhi' },
+    { id: '2', name: 'Food Point', lat: 28.6129, lng: 77.2095, type: 'beggar' as const, address: 'Near Metro' },
+    { id: '3', name: 'Agent Ram', lat: 28.6149, lng: 77.2085, type: 'agent' as const, address: 'On Route' },
+  ];
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
-      <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            {userProfile.role === 'hotel' && 'Hotel Dashboard'}
-            {userProfile.role === 'agent' && 'Agent Dashboard'}
-            {userProfile.role === 'admin' && 'Admin Dashboard'}
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8 animate-fade-in">
+          <h1 className="text-3xl font-bold text-foreground text-shadow">
+            {userProfile?.role === 'hotel' && '🏨 Hotel Dashboard'}
+            {userProfile?.role === 'agent' && '🚚 Agent Dashboard'}
+            {userProfile?.role === 'admin' && '⚙️ Admin Dashboard'}
           </h1>
-          <p className="text-muted-foreground">
-            Welcome back, {userProfile.name}!
+          <p className="text-muted-foreground mt-2">
+            Welcome back, {profileData?.name || userProfile?.name || user?.email}
           </p>
         </div>
 
-        {getRoleSpecificContent()}
+        {/* Quick Actions */}
+        {userProfile?.role === 'hotel' && (
+          <div className="mb-6">
+            <Button 
+              onClick={() => setShowFoodForm(!showFoodForm)}
+              className="gradient-hover animate-pulse-glow"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Report Surplus Food
+            </Button>
+          </div>
+        )}
 
-        {/* Recent Reports/Tasks List */}
-        <div className="space-y-4">
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardContent className="p-4">
-                    <div className="h-4 bg-muted rounded mb-2"></div>
-                    <div className="h-4 bg-muted rounded w-2/3"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : dashboardData.recentReports.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <div className="text-6xl mb-4">📦</div>
-                <h3 className="text-xl font-semibold mb-2">No data yet</h3>
-                <p className="text-muted-foreground">
-                  {userProfile.role === 'hotel' && 'Start by creating your first food report'}
-                  {userProfile.role === 'agent' && 'No tasks assigned yet'}
-                  {userProfile.role === 'admin' && 'Platform activity will appear here'}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            dashboardData.recentReports.map((report) => (
-              <Card key={report.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{report.food_name}</h3>
-                      <p className="text-muted-foreground text-sm mb-2">
-                        {userProfile.role === 'agent' && report.hotels?.name}
-                        {userProfile.role !== 'agent' && report.description}
-                      </p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center">
-                          <Package className="h-3 w-3 mr-1" />
-                          Qty: {report.quantity}
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {new Date(report.pickup_time).toLocaleString()}
-                        </div>
-                        {userProfile.role === 'agent' && report.hotels && (
-                          <div className="flex items-center">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            {report.hotels.city}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge className={getStatusBadge(report.status)}>
-                        {report.status}
-                      </Badge>
-                      <Button variant="ghost" size="sm" className="mt-2">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+        {/* Food Report Form */}
+        {showFoodForm && userProfile?.role === 'hotel' && profileData && (
+          <div className="mb-8">
+            <FoodReportForm 
+              hotelId={profileData.id} 
+              onSuccess={() => {
+                setShowFoodForm(false);
+                fetchDashboardData();
+              }} 
+            />
+          </div>
+        )}
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {dashboardData?.role === 'hotel' && (
+            <>
+              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
+                  <Package className="h-4 w-4 text-primary animate-float" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{dashboardData?.stats?.totalReports}</div>
                 </CardContent>
               </Card>
-            ))
+              
+              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300" style={{animationDelay: '0.1s'}}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Reports</CardTitle>
+                  <Truck className="h-4 w-4 text-warning animate-float" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-warning">{dashboardData?.stats?.activeReports}</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300" style={{animationDelay: '0.2s'}}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-accent animate-float" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-accent">{dashboardData?.stats?.completedReports}</div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {dashboardData?.role === 'agent' && (
+            <>
+              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
+                  <Package className="h-4 w-4 text-primary animate-float" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{dashboardData?.stats?.totalAssignments}</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300" style={{animationDelay: '0.1s'}}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending Pickups</CardTitle>
+                  <Truck className="h-4 w-4 text-warning animate-float" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-warning">{dashboardData?.stats?.pendingPickups}</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300" style={{animationDelay: '0.2s'}}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Completed Deliveries</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-accent animate-float" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-accent">{dashboardData?.stats?.completedDeliveries}</div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {dashboardData?.role === 'admin' && (
+            <>
+              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
+                  <Package className="h-4 w-4 text-primary animate-float" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{dashboardData?.stats?.totalReports}</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300" style={{animationDelay: '0.1s'}}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Hotels</CardTitle>
+                  <Users className="h-4 w-4 text-warning animate-float" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-warning">{dashboardData?.stats?.totalHotels}</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="animate-fade-in glass-card hover:scale-105 transition-transform duration-300" style={{animationDelay: '0.2s'}}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Agents</CardTitle>
+                  <Truck className="h-4 w-4 text-accent animate-float" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-accent">{dashboardData?.stats?.totalAgents}</div>
+                </CardContent>
+              </Card>
+            </>
           )}
         </div>
-      </div>
 
-      <BottomNavigation />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Map View for Agents */}
+          {userProfile?.role === 'agent' && (
+            <div className="animate-slide-up">
+              <MapView locations={mockLocations} />
+            </div>
+          )}
+
+          {/* Recent Activity */}
+          <Card className="animate-slide-up glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {dashboardData?.recentReports?.map((report: any, index: number) => (
+                  <div 
+                    key={report.id} 
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-card-hover transition-colors animate-fade-in"
+                    style={{animationDelay: `${index * 0.1}s`}}
+                  >
+                    <div>
+                      <h4 className="font-medium">{report.food_name}</h4>
+                      <p className="text-sm text-muted-foreground">{report.quantity} servings</p>
+                    </div>
+                    <Badge 
+                      variant={report.status === 'new' ? 'default' : 'secondary'}
+                      className="animate-pulse-glow"
+                    >
+                      {report.status}
+                    </Badge>
+                  </div>
+                ))}
+                
+                {(!dashboardData?.recentReports || dashboardData?.recentReports.length === 0) && (
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-float" />
+                    <p className="text-muted-foreground">No recent activity</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Full width map for admin */}
+        {userProfile?.role === 'admin' && (
+          <div className="animate-slide-up">
+            <MapView locations={mockLocations} />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
-
-export default Dashboard;

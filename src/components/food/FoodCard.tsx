@@ -1,158 +1,94 @@
 import React from 'react';
-import { Clock, MapPin, User } from 'lucide-react';
+import { Clock, MapPin, Star, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface FoodCardProps {
-  food: {
-    id: string;
-    food_name: string;
-    food_type: 'veg' | 'non_veg' | 'snacks' | 'beverages' | 'dairy' | 'bakery';
-    description?: string;
-    quantity: number;
-    pickup_time: string;
-    status: 'new' | 'assigned' | 'picked' | 'delivered' | 'cancelled';
-    image_url?: string;
-    hotels: {
-      name: string;
-      street: string;
-      city: string;
-      rating: number;
-    };
-  };
-  onAction?: (action: string, foodId: string) => void;
-  showActionButton?: boolean;
-  actionButtonText?: string;
+  id: string;
+  name: string;
+  restaurant: string;
+  location: string;
+  image: string;
+  price: number;
+  rating: number;
+  cookTime: number;
+  isVeg: boolean;
+  quantity: number;
+  pickupTime: string;
 }
 
-const FoodCard: React.FC<FoodCardProps> = ({ 
-  food, 
-  onAction, 
-  showActionButton = true,
-  actionButtonText = "Pick Up"
+export const FoodCard: React.FC<FoodCardProps> = ({
+  name,
+  restaurant,
+  location,
+  image,
+  price,
+  rating,
+  cookTime,
+  isVeg,
+  quantity,
+  pickupTime
 }) => {
-  const getFoodTypeColor = (type: string) => {
-    switch (type) {
-      case 'veg':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'non_veg':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'new':
-        return 'bg-blue-100 text-blue-800';
-      case 'assigned':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'picked':
-        return 'bg-orange-100 text-orange-800';
-      case 'delivered':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   return (
-    <Card className="food-card">
-      <CardContent className="p-0">
-        {food.image_url && (
-          <div className="relative">
-            <img
-              src={food.image_url}
-              alt={food.food_name}
-              className="food-card-image"
-            />
-            <div className="absolute top-2 left-2">
-              <Badge className={getFoodTypeColor(food.food_type)}>
-                {food.food_type.replace('_', ' ')}
-              </Badge>
-            </div>
-            <div className="absolute top-2 right-2">
-              <Badge className={getStatusColor(food.status)}>
-                {food.status}
-              </Badge>
-            </div>
-          </div>
-        )}
+    <Card className="food-card overflow-hidden group glass-card hover:shadow-xl transition-all duration-300">
+      <div className="relative overflow-hidden">
+        <img 
+          src={image} 
+          alt={name}
+          className="food-card-image group-hover:scale-110 transition-transform duration-500"
+        />
         
-        <div className="p-4">
-          <div className="flex items-start justify-between mb-2">
-            <div>
-              <h3 className="font-semibold text-lg">{food.food_name}</h3>
-              <div className="flex items-center text-sm text-muted-foreground mt-1">
-                <User className="h-3 w-3 mr-1" />
-                <span>{food.hotels.name}</span>
-                <span className="ml-2">★ {food.hotels.rating}</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm font-medium">Qty: {food.quantity}</div>
-            </div>
-          </div>
-
-          {food.description && (
-            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-              {food.description}
-            </p>
-          )}
-
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Clock className="h-3 w-3 mr-1" />
-              <span>Pickup: {formatTime(food.pickup_time)}</span>
-            </div>
-            <div className="flex items-center text-sm text-muted-foreground">
-              <MapPin className="h-3 w-3 mr-1" />
-              <span>{food.hotels.city}</span>
-            </div>
-          </div>
-
-          {showActionButton && food.status === 'new' && (
-            <Button 
-              className="w-full"
-              onClick={() => onAction?.('assign', food.id)}
-            >
-              {actionButtonText}
-            </Button>
-          )}
-
-          {food.status === 'assigned' && (
-            <Button 
-              className="w-full" 
-              variant="secondary"
-              onClick={() => onAction?.('pickup', food.id)}
-            >
-              Mark as Picked Up
-            </Button>
-          )}
-
-          {food.status === 'picked' && (
-            <Button 
-              className="w-full"
-              onClick={() => onAction?.('deliver', food.id)}
-            >
-              Mark as Delivered
-            </Button>
-          )}
+        {/* Gradient overlay for better text visibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        
+        <div className="absolute top-2 left-2">
+          <Badge className={`${isVeg ? 'badge-veg' : 'badge-non-veg'} animate-pulse-glow`}>
+            {isVeg ? '🌱 Veg' : '🍖 Non-Veg'}
+          </Badge>
         </div>
+        <div className="absolute top-2 right-2">
+          <Badge variant="secondary" className="bg-accent text-accent-foreground animate-shimmer">
+            ✨ Free
+          </Badge>
+        </div>
+        
+        {/* Floating quantity indicator */}
+        <div className="absolute bottom-2 right-2 bg-primary text-primary-foreground px-2 py-1 rounded-full text-xs font-bold animate-bounce-in">
+          {quantity} servings
+        </div>
+      </div>
+      
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{name}</h3>
+          <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full">
+            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 animate-pulse" />
+            <span className="text-sm font-medium">{rating}</span>
+          </div>
+        </div>
+        
+        <p className="text-muted-foreground text-sm mb-1 font-medium">{restaurant}</p>
+        <p className="text-muted-foreground text-xs mb-3 flex items-center">
+          <MapPin className="h-3 w-3 mr-1 text-primary" />
+          {location}
+        </p>
+        
+        <div className="flex justify-between items-center text-sm mb-3">
+          <span className="flex items-center text-warning font-medium">
+            <Clock className="h-4 w-4 mr-1" />
+            Pickup: {pickupTime}
+          </span>
+          <Badge variant="outline" className="text-xs">
+            Fresh
+          </Badge>
+        </div>
+        
+        <Button className="w-full gradient-hover group-hover:scale-105 transition-transform animate-shimmer">
+          <Heart className="h-4 w-4 mr-2" />
+          Request Pickup
+        </Button>
       </CardContent>
     </Card>
   );
 };
-
-export default FoodCard;

@@ -1,46 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import Navbar from '@/components/layout/Navbar';
-import BottomNavigation from '@/components/layout/BottomNavigation';
-import FoodCard from '@/components/food/FoodCard';
+import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Utensils, Users, MapPin, Clock, TrendingUp } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
+import { FoodCard } from '@/components/food/FoodCard';
+import { MapPin, Search, Filter, Clock, Users, Truck, Heart, Sparkles } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import heroImage from '@/assets/hero-food.jpg';
 
 const Index = () => {
-  const { user, userProfile } = useAuth();
-  const navigate = useNavigate();
-  const [foodReports, setFoodReports] = useState([]);
+  const { user } = useAuth();
+  const [foodReports, setFoodReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [stats, setStats] = useState({
-    totalReports: 0,
-    activeAgents: 0,
-    foodSaved: 0,
-    peopleHelped: 0
-  });
-
-  const categories = [
-    { id: 'all', label: 'All', icon: '🍽️' },
-    { id: 'veg', label: 'Vegetarian', icon: '🥗' },
-    { id: 'non_veg', label: 'Non-Veg', icon: '🍖' },
-    { id: 'snacks', label: 'Snacks', icon: '🍪' },
-    { id: 'beverages', label: 'Beverages', icon: '🥤' },
-    { id: 'dairy', label: 'Dairy', icon: '🥛' },
-    { id: 'bakery', label: 'Bakery', icon: '🍞' },
-  ];
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState('all');
 
   useEffect(() => {
     fetchFoodReports();
-    fetchStats();
-  }, [selectedCategory, user]);
+  }, []);
 
   const fetchFoodReports = async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('food_reports')
         .select(`
           *,
@@ -48,24 +31,14 @@ const Index = () => {
             name,
             street,
             city,
-            rating
+            landmark
           )
         `)
         .eq('status', 'new')
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (selectedCategory !== 'all') {
-        query = query.eq('food_type', selectedCategory as any);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching food reports:', error);
-        return;
-      }
-
+      if (error) throw error;
       setFoodReports(data || []);
     } catch (error) {
       console.error('Error fetching food reports:', error);
@@ -74,252 +47,212 @@ const Index = () => {
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const [reportsResult, agentsResult, distributionsResult] = await Promise.all([
-        supabase.from('food_reports').select('id', { count: 'exact', head: true }),
-        supabase.from('delivery_agents').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('distribution_records').select('quantity_distributed', { count: 'exact' })
-      ]);
+  const filteredReports = foodReports.filter(report => {
+    const matchesSearch = report.food_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         report.hotels?.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = selectedFilter === 'all' || report.food_type === selectedFilter;
+    return matchesSearch && matchesFilter;
+  });
 
-      const totalFoodSaved = distributionsResult.data?.reduce((sum, record) => sum + (record.quantity_distributed || 0), 0) || 0;
-
-      setStats({
-        totalReports: reportsResult.count || 0,
-        activeAgents: agentsResult.count || 0,
-        foodSaved: totalFoodSaved,
-        peopleHelped: distributionsResult.data?.length || 0
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
-  };
-
-  const handleFoodAction = async (action: string, foodId: string) => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-
-    // Handle different actions based on user role and action type
-    console.log(`Action: ${action} on food: ${foodId}`);
-    // This will be implemented based on user role
-  };
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100">
-        <Navbar />
-        
-        {/* Hero Section */}
-        <section className="relative py-20 px-4">
-          <div className="max-w-7xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6">
-              Save Food,
-              <span className="text-primary block">Feed Hope</span>
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Connect surplus food from restaurants with those who need it most. 
-              Join our mission to reduce waste and fight hunger.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" onClick={() => navigate('/auth')} className="text-lg px-8 py-4">
-                Get Started
-              </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-4">
-                Learn More
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Stats Section */}
-        <section className="py-16 bg-white">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                  {stats.totalReports}+
-                </div>
-                <div className="text-muted-foreground">Food Reports</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                  {stats.activeAgents}+
-                </div>
-                <div className="text-muted-foreground">Active Agents</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                  {stats.foodSaved}+
-                </div>
-                <div className="text-muted-foreground">Meals Saved</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                  {stats.peopleHelped}+
-                </div>
-                <div className="text-muted-foreground">People Helped</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* How it Works */}
-        <section className="py-16 bg-muted/50">
-          <div className="max-w-7xl mx-auto px-4">
-            <h2 className="text-3xl font-bold text-center mb-12">How FoodShare Works</h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Utensils className="h-8 w-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">Report Surplus</h3>
-                  <p className="text-muted-foreground">
-                    Restaurants report available surplus food with pickup times and quantities.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <MapPin className="h-8 w-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">Collect & Deliver</h3>
-                  <p className="text-muted-foreground">
-                    Trained agents collect the food and deliver it to people in need across the city.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users className="h-8 w-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">Feed Communities</h3>
-                  <p className="text-muted-foreground">
-                    Food reaches those who need it most, reducing waste and fighting hunger.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-      </div>
-    );
+  // If user is logged in, redirect to dashboard
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
-      <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Welcome back, {userProfile?.name || 'User'}!
-          </h1>
-          <p className="text-muted-foreground">
-            {userProfile?.role === 'hotel' && 'Manage your food reports and track pickups'}
-            {userProfile?.role === 'agent' && 'View available pickups and manage deliveries'}
-            {userProfile?.role === 'admin' && 'Monitor platform operations and analytics'}
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary-dark to-accent opacity-90"></div>
+        <div className="absolute inset-0 bg-black/10"></div>
+        
+        {/* Animated background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-20 w-32 h-32 bg-white/10 rounded-full animate-float"></div>
+          <div className="absolute top-40 right-32 w-24 h-24 bg-white/5 rounded-full animate-float" style={{animationDelay: '1s'}}></div>
+          <div className="absolute bottom-32 left-1/3 w-40 h-40 bg-white/5 rounded-full animate-float" style={{animationDelay: '2s'}}></div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{stats.totalReports}</div>
-              <div className="text-sm text-muted-foreground">Total Reports</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-accent">{stats.activeAgents}</div>
-              <div className="text-sm text-muted-foreground">Active Agents</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-success">{stats.foodSaved}</div>
-              <div className="text-sm text-muted-foreground">Meals Saved</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-warning">{stats.peopleHelped}</div>
-              <div className="text-sm text-muted-foreground">People Helped</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Category Filter */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4">Available Surplus Food</h2>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {categories.map((category) => (
-              <Badge
-                key={category.id}
-                variant={selectedCategory === category.id ? "default" : "outline"}
-                className="cursor-pointer whitespace-nowrap px-3 py-2"
-                onClick={() => setSelectedCategory(category.id)}
-              >
-                <span className="mr-1">{category.icon}</span>
-                {category.label}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        {/* Food Cards Grid */}
-        {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-4">
-                  <div className="h-40 bg-muted rounded mb-4"></div>
-                  <div className="h-4 bg-muted rounded mb-2"></div>
-                  <div className="h-4 bg-muted rounded w-2/3"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : foodReports.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🍽️</div>
-            <h3 className="text-xl font-semibold mb-2">No surplus food available</h3>
-            <p className="text-muted-foreground">
-              {selectedCategory !== 'all' 
-                ? `No ${selectedCategory.replace('_', ' ')} items available at the moment.`
-                : 'Check back later for new food reports.'
-              }
+        <div className="relative container mx-auto px-4 py-20 text-center text-white">
+          <div className="animate-fade-in">
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <Heart className="h-8 w-8 text-red-400 animate-pulse" />
+              <h1 className="text-4xl md:text-6xl font-bold text-shadow">
+                FoodShare
+              </h1>
+              <Sparkles className="h-8 w-8 text-yellow-400 animate-pulse" />
+            </div>
+            <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-shadow">
+              Connecting surplus food from hotels with those who need it most
             </p>
-            {userProfile?.role === 'hotel' && (
-              <Button className="mt-4" onClick={() => navigate('/reports')}>
-                Report Surplus Food
+            <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
+              <Button size="lg" variant="secondary" className="text-lg px-8 gradient-hover animate-shimmer">
+                <Search className="h-5 w-5 mr-2" />
+                Find Food Near You
               </Button>
-            )}
+              <Button size="lg" variant="outline" className="text-lg px-8 border-white text-white hover:bg-white hover:text-primary glass-card">
+                <Users className="h-5 w-5 mr-2" />
+                Join as Partner
+              </Button>
+            </div>
           </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {foodReports.map((food) => (
-              <FoodCard
-                key={food.id}
-                food={food}
-                onAction={handleFoodAction}
-                showActionButton={userProfile?.role === 'agent'}
-                actionButtonText={
-                  userProfile?.role === 'agent' ? 'Assign to Me' : 'View Details'
-                }
-              />
-            ))}
-          </div>
-        )}
-      </div>
+        </div>
+      </section>
 
-      <BottomNavigation />
+      {/* Search and Filters */}
+      <section className="py-8 bg-white/80 backdrop-blur-md border-b animate-slide-up">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-center">
+            <div className="flex-1 max-w-md">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="Search by location or food type..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-3 border-2 border-transparent focus:border-primary transition-all duration-300"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="glass-card hover:scale-105 transition-transform">
+                <MapPin className="h-4 w-4 mr-1" />
+                Delhi, India
+              </Button>
+              
+              {/* Food Type Filters */}
+              <div className="flex gap-1">
+                {[
+                  { value: 'all', label: 'All' },
+                  { value: 'veg', label: '🥗 Veg' },
+                  { value: 'non_veg', label: '🍗 Non-Veg' },
+                  { value: 'snacks', label: '🍪 Snacks' }
+                ].map((filter) => (
+                  <Button
+                    key={filter.value}
+                    variant={selectedFilter === filter.value ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedFilter(filter.value)}
+                    className={`transition-all duration-300 ${
+                      selectedFilter === filter.value ? 'animate-pulse-glow' : 'glass-card'
+                    }`}
+                  >
+                    {filter.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Available Food Reports */}
+      <section className="py-8">
+        <div className="container mx-auto px-4">
+          <h2 className="text-2xl font-bold text-center mb-8 animate-fade-in">
+            Available Surplus Food
+          </h2>
+          
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, index) => (
+                <Card key={index} className="animate-pulse">
+                  <div className="h-48 bg-muted rounded-t-lg"></div>
+                  <CardContent className="p-4">
+                    <div className="h-4 bg-muted rounded mb-2"></div>
+                    <div className="h-3 bg-muted rounded mb-1"></div>
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredReports.map((report, index) => (
+                <div
+                  key={report.id}
+                  className="animate-fade-in hover:scale-105 transition-transform duration-300"
+                  style={{animationDelay: `${index * 0.1}s`}}
+                >
+                  <FoodCard
+                    id={report.id}
+                    name={report.food_name}
+                    restaurant={report.hotels?.name || 'Unknown Restaurant'}
+                    location={`${report.hotels?.street || ''}, ${report.hotels?.city || ''}`}
+                    image={report.image_url || heroImage}
+                    price={0}
+                    rating={4.5}
+                    cookTime={Math.floor(Math.random() * 30) + 10}
+                    isVeg={report.food_type === 'veg'}
+                    quantity={report.quantity}
+                    pickupTime={new Date(report.pickup_time).toLocaleTimeString()}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && filteredReports.length === 0 && (
+            <div className="text-center py-12 animate-bounce-in">
+              <div className="text-6xl mb-4">🍽️</div>
+              <h3 className="text-xl font-semibold mb-2">No surplus food available</h3>
+              <p className="text-muted-foreground">
+                {searchQuery || selectedFilter !== 'all' 
+                  ? 'Try adjusting your search or filters'
+                  : 'Check back later for new listings'}
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 animate-fade-in">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12 text-shadow">Our Impact</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card className="text-center glass-card hover:scale-105 transition-transform duration-300 animate-bounce-in">
+              <CardContent className="p-6">
+                <div className="text-4xl font-bold text-primary mb-2 animate-pulse-glow">10,000+</div>
+                <p className="text-muted-foreground">Meals Rescued</p>
+                <Heart className="h-6 w-6 text-red-400 mx-auto mt-2 animate-float" />
+              </CardContent>
+            </Card>
+            <Card className="text-center glass-card hover:scale-105 transition-transform duration-300 animate-bounce-in" style={{animationDelay: '0.2s'}}>
+              <CardContent className="p-6">
+                <div className="text-4xl font-bold text-primary mb-2 animate-pulse-glow">150+</div>
+                <p className="text-muted-foreground">Partner Hotels</p>
+                <Users className="h-6 w-6 text-blue-400 mx-auto mt-2 animate-float" />
+              </CardContent>
+            </Card>
+            <Card className="text-center glass-card hover:scale-105 transition-transform duration-300 animate-bounce-in" style={{animationDelay: '0.4s'}}>
+              <CardContent className="p-6">
+                <div className="text-4xl font-bold text-primary mb-2 animate-pulse-glow">50+</div>
+                <p className="text-muted-foreground">Active Volunteers</p>
+                <Truck className="h-6 w-6 text-green-400 mx-auto mt-2 animate-float" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Call to Action */}
+      <section className="py-20 text-center">
+        <div className="container mx-auto px-4">
+          <div className="animate-fade-in">
+            <h2 className="text-3xl font-bold mb-6">Ready to Make a Difference?</h2>
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Join thousands of food heroes who are making a real impact in their communities.
+            </p>
+            <Button size="lg" className="gradient-hover animate-pulse-glow">
+              <Heart className="h-5 w-5 mr-2" />
+              Start Your Journey
+            </Button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
