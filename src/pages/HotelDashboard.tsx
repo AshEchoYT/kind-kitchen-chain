@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, MapPin, Clock, Package, TrendingUp, Users, Star } from 'lucide-react';
 import { FoodReportForm } from '@/components/food/FoodReportForm';
+import { EnhancedFoodCard } from '@/components/food/EnhancedFoodCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/layout/Navbar';
@@ -57,7 +58,14 @@ const HotelDashboard = () => {
         .from('food_reports')
         .select(`
           *,
-          delivery_agents (name, contact)
+          hotels!inner (
+            name,
+            street,
+            city,
+            contact,
+            latitude,
+            longitude
+          )
         `)
         .eq('hotel_id', hotelData?.id)
         .order('created_at', { ascending: false });
@@ -262,128 +270,79 @@ const HotelDashboard = () => {
           </TabsList>
 
           <TabsContent value="active" className="mt-6">
-            <div className="grid gap-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {foodReports.filter(report => ['new', 'assigned', 'picked'].includes(report.status)).map((report) => (
-                <Card key={report.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="font-semibold text-lg">{report.food_name}</h3>
-                        <p className="text-muted-foreground">{report.description}</p>
-                      </div>
-                      <Badge className={getStatusColor(report.status)}>
-                        {getStatusLabel(report.status)}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{report.quantity} portions</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          Pickup: {new Date(report.pickup_time).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {report.food_type.toUpperCase()}
-                        </span>
-                        <div className={`w-2 h-2 rounded-full ${report.food_type === 'veg' ? 'bg-green-500' : 'bg-red-500'}`} />
-                      </div>
-                    </div>
-
-                    {report.assigned_agent_id && (
-                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                        <p className="text-sm font-medium">
-                          Assigned Agent: {report.delivery_agents?.name || 'Agent'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Contact: {report.delivery_agents?.contact || 'N/A'}
-                        </p>
-                      </div>
-                    )}
+                <EnhancedFoodCard
+                  key={report.id}
+                  foodReport={report}
+                  showActions={false}
+                />
+              ))}
+              {foodReports.filter(report => ['new', 'assigned', 'picked'].includes(report.status)).length === 0 && (
+                <Card className="col-span-full">
+                  <CardContent className="p-12 text-center">
+                    <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Active Reports</h3>
+                    <p className="text-muted-foreground mb-4">
+                      You don't have any active food reports. Start by reporting surplus food!
+                    </p>
+                    <Button onClick={() => setShowReportForm(true)} className="gradient-hover">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Report Surplus Food
+                    </Button>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="completed" className="mt-6">
-            <div className="grid gap-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {foodReports.filter(report => report.status === 'delivered').map((report) => (
-                <Card key={report.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="font-semibold text-lg">{report.food_name}</h3>
-                        <p className="text-muted-foreground">{report.description}</p>
-                      </div>
-                      <Badge className="bg-green-500">Delivered</Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{report.quantity} portions</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          Delivered: {new Date(report.updated_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {report.food_type.toUpperCase()}
-                        </span>
-                        <div className={`w-2 h-2 rounded-full ${report.food_type === 'veg' ? 'bg-green-500' : 'bg-red-500'}`} />
-                      </div>
-                    </div>
+                <EnhancedFoodCard
+                  key={report.id}
+                  foodReport={report}
+                  showActions={false}
+                />
+              ))}
+              {foodReports.filter(report => report.status === 'delivered').length === 0 && (
+                <Card className="col-span-full">
+                  <CardContent className="p-12 text-center">
+                    <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Completed Deliveries</h3>
+                    <p className="text-muted-foreground">
+                      Completed deliveries will appear here once your food reports are delivered.
+                    </p>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="all" className="mt-6">
-            <div className="grid gap-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {foodReports.map((report) => (
-                <Card key={report.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="font-semibold text-lg">{report.food_name}</h3>
-                        <p className="text-muted-foreground">{report.description}</p>
-                      </div>
-                      <Badge className={getStatusColor(report.status)}>
-                        {getStatusLabel(report.status)}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{report.quantity} portions</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          Created: {new Date(report.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {report.food_type.toUpperCase()}
-                        </span>
-                        <div className={`w-2 h-2 rounded-full ${report.food_type === 'veg' ? 'bg-green-500' : 'bg-red-500'}`} />
-                      </div>
-                    </div>
+                <EnhancedFoodCard
+                  key={report.id}
+                  foodReport={report}
+                  showActions={false}
+                />
+              ))}
+              {foodReports.length === 0 && (
+                <Card className="col-span-full">
+                  <CardContent className="p-12 text-center">
+                    <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Food Reports Yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Get started by reporting your first surplus food item.
+                    </p>
+                    <Button onClick={() => setShowReportForm(true)} className="gradient-hover">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Report Your First Food Item
+                    </Button>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
           </TabsContent>
         </Tabs>

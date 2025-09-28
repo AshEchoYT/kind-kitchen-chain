@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MapPin, Navigation, Building, Truck, CheckCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,7 +28,6 @@ const ProfileSetup = () => {
     pincode: '',
     latitude: null as number | null,
     longitude: null as number | null,
-    serviceRadius: [5], // For agents only
     businessName: '', // For hotels only
     businessType: '', // For hotels only
   });
@@ -148,7 +146,6 @@ const ProfileSetup = () => {
           pincode: profileData.pincode,
           latitude: profileData.latitude,
           longitude: profileData.longitude,
-          service_radius: userRole === 'agent' ? profileData.serviceRadius[0] : null,
           business_name: userRole === 'hotel' ? profileData.businessName : null,
           business_type: userRole === 'hotel' ? profileData.businessType : null,
           profile_completed: true
@@ -403,21 +400,6 @@ const ProfileSetup = () => {
                         </p>
                       </div>
                     )}
-
-                    <div className="space-y-2">
-                      <Label>Service Radius: {profileData.serviceRadius[0]} km</Label>
-                      <Slider
-                        value={profileData.serviceRadius}
-                        onValueChange={(value) => setProfileData({...profileData, serviceRadius: value})}
-                        max={50}
-                        min={1}
-                        step={1}
-                        className="w-full"
-                      />
-                      <p className="text-xs text-gray-500">
-                        Select how far you're willing to travel for food pickup and delivery
-                      </p>
-                    </div>
                   </div>
 
                   <div className="flex space-x-3">
@@ -501,10 +483,6 @@ const ProfileSetup = () => {
                     )}
                     {userRole === 'agent' && (
                       <>
-                        <div className="flex justify-between">
-                          <span className="font-medium">Service Radius:</span>
-                          <span>{profileData.serviceRadius[0]} km</span>
-                        </div>
                         <div className="flex justify-between">
                           <span className="font-medium">GPS Enabled:</span>
                           <span className="text-green-600">Yes</span>

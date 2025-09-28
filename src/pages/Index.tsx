@@ -22,10 +22,18 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import { useNavigate } from 'react-router-dom';
+import { useRoleBasedNavigation } from '@/hooks/use-role-navigation';
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const navigate = useNavigate();
+  const {
+    handleHotelPartnerAccess,
+    handleDeliveryAgentAccess,
+    handleFoodHelpAccess,
+    handleViewAvailableFood,
+    handleDashboardAccess
+  } = useRoleBasedNavigation();
 
   const handleGetStarted = () => {
     if (user) {
@@ -61,9 +69,15 @@ const Index = () => {
         <div className="relative z-10 container mx-auto px-4 text-center text-white">
           <div className="max-w-4xl mx-auto">
             {/* Badge */}
-            <Badge className="mb-6 bg-gradient-to-r from-orange-500 to-red-500 text-white border-none px-4 py-2 text-sm font-medium animate-pulse">
-              🌟 Tamil Nadu's #1 Food Rescue Platform
-            </Badge>
+            {user && userProfile ? (
+              <Badge className="mb-6 bg-gradient-to-r from-green-500 to-blue-500 text-white border-none px-4 py-2 text-sm font-medium animate-pulse">
+                👋 Welcome back, {userProfile.name}! You're logged in as {userProfile.role}
+              </Badge>
+            ) : (
+              <Badge className="mb-6 bg-gradient-to-r from-orange-500 to-red-500 text-white border-none px-4 py-2 text-sm font-medium animate-pulse">
+                🌟 Tamil Nadu's #1 Food Rescue Platform
+              </Badge>
+            )}
             
             {/* Main Heading */}
             <div className="flex items-center justify-center gap-3 mb-6">
@@ -81,31 +95,65 @@ const Index = () => {
             </div>
             
             {/* Description */}
-            <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-gray-200 leading-relaxed">
-              Connecting surplus food from restaurants with those who need it most across Tamil Nadu. 
-              <span className="block mt-2 text-orange-200 font-semibold">Join the revolution against food waste!</span>
-            </p>
+            {user && userProfile ? (
+              <div className="mb-10">
+                <p className="text-xl md:text-2xl mb-4 max-w-3xl mx-auto text-gray-200 leading-relaxed">
+                  {userProfile.role === 'hotel' && "Manage your food donations and track your impact in reducing waste across Tamil Nadu."}
+                  {userProfile.role === 'agent' && "Browse available food pickups, manage your deliveries, and help feed those in need."}
+                  {userProfile.role === 'admin' && "Oversee the entire food rescue operation and manage the platform effectively."}
+                </p>
+                <p className="text-orange-200 font-semibold">
+                  {userProfile.role === 'hotel' && "Ready to report surplus food?"}
+                  {userProfile.role === 'agent' && "Check your task board for new deliveries!"}
+                  {userProfile.role === 'admin' && "Monitor and manage the food rescue network."}
+                </p>
+              </div>
+            ) : (
+              <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-gray-200 leading-relaxed">
+                Connecting surplus food from restaurants with those who need it most across Tamil Nadu. 
+                <span className="block mt-2 text-orange-200 font-semibold">Join the revolution against food waste!</span>
+              </p>
+            )}
             
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            <div className="flex flex-col lg:flex-row gap-4 justify-center items-center">
               <Button 
                 size="lg" 
-                className="text-xl px-12 py-6 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-none shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300"
-                onClick={handleGetStarted}
+                className="text-lg px-8 py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-none shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                onClick={handleHotelPartnerAccess}
               >
-                <Zap className="h-6 w-6 mr-3" />
-                Get Started Now
-                <ArrowRight className="h-6 w-6 ml-3" />
+                <ChefHat className="h-5 w-5 mr-2" />
+                Join as Hotel Partner
               </Button>
               
               <Button 
                 size="lg" 
-                variant="outline"
-                className="text-xl px-12 py-6 border-2 border-white text-white hover:bg-white hover:text-gray-900 transition-all duration-300 hover:scale-105 backdrop-blur-sm bg-white/10"
-                onClick={() => navigate('/auth')}
+                className="text-lg px-8 py-4 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white border-none shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                onClick={handleDeliveryAgentAccess}
               >
-                <HandHeart className="h-6 w-6 mr-3" />
-                Join Our Mission
+                <Truck className="h-5 w-5 mr-2" />
+                Become Delivery Agent
+              </Button>
+              
+              <Button 
+                size="lg" 
+                className="text-lg px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-none shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                onClick={handleFoodHelpAccess}
+              >
+                <Heart className="h-5 w-5 mr-2" />
+                Request Food Help
+              </Button>
+            </div>
+            
+            <div className="mt-6">
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="text-lg px-8 py-3 border-2 border-white text-white hover:bg-white hover:text-gray-900 transition-all duration-300 hover:scale-105 backdrop-blur-sm bg-white/10"
+                onClick={handleViewAvailableFood}
+              >
+                View Available Food
+                <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             </div>
             
@@ -303,7 +351,7 @@ const Index = () => {
             size="lg" 
             variant="secondary"
             className="text-xl px-12 py-6 bg-white text-gray-900 hover:bg-gray-100 transition-all duration-300 hover:scale-105 shadow-2xl"
-            onClick={handleGetStarted}
+            onClick={handleDashboardAccess}
           >
             <Heart className="h-6 w-6 mr-3" />
             Start Your Journey

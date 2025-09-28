@@ -88,12 +88,12 @@ const AgentDashboard = () => {
 
       if (availableError) throw availableError;
 
-      // Filter by agent's service radius (if location data available)
+      // Filter by agent's location (if location data available)
       const filteredAvailable = available?.filter(task => {
-        if (!agentData.service_radius || !task.hotels?.latitude || !task.hotels?.longitude) {
+        if (!task.hotels?.latitude || !task.hotels?.longitude) {
           return true; // Include all if no location data
         }
-        // TODO: Add distance calculation based on service_radius
+        // All tasks in the city are considered available
         return true;
       }) || [];
 

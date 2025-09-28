@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Building, Truck, Navigation, User } from 'lucide-react';
@@ -23,7 +22,6 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ role, onComplete }) 
   const [loading, setLoading] = useState(false);
   const [selectedCity, setSelectedCity] = useState<string>('');
   const [availableAreas, setAvailableAreas] = useState<any[]>([]);
-  const [serviceRadius, setServiceRadius] = useState([10]); // Default 10km radius
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [formData, setFormData] = useState({
@@ -37,7 +35,6 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ role, onComplete }) 
     uniqueId: '',
     latitude: 0,
     longitude: 0,
-    service_radius: 10,
   });
 
   useEffect(() => {
@@ -56,13 +53,6 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ role, onComplete }) 
       }));
     }
   }, [currentLocation]);
-
-  useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      service_radius: serviceRadius[0]
-    }));
-  }, [serviceRadius]);
 
   const getCurrentLocation = () => {
     setGettingLocation(true);
@@ -127,6 +117,17 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ role, onComplete }) 
         });
         if (error) throw error;
       } else {
+        console.log('Attempting to insert agent with data:', {
+          user_id: user.id,
+          name: formData.name,
+          contact: formData.contact,
+          area: formData.area,
+          zone: formData.zone,
+          unique_id: formData.uniqueId,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+        });
+        
         const { error } = await supabase.from('delivery_agents').insert({
           user_id: user.id,
           name: formData.name,
@@ -136,9 +137,12 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ role, onComplete }) 
           unique_id: formData.uniqueId,
           latitude: formData.latitude,
           longitude: formData.longitude,
-          service_radius: formData.service_radius,
         });
-        if (error) throw error;
+        
+        if (error) {
+          console.error('Agent insert error:', error);
+          throw error;
+        }
       }
 
       toast({
@@ -147,9 +151,10 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ role, onComplete }) 
       });
       onComplete();
     } catch (error: any) {
+      console.error('Profile setup error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to create profile",
         variant: "destructive",
       });
     } finally {
@@ -327,29 +332,6 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ role, onComplete }) 
                     placeholder="Primary service zone"
                     required
                   />
-                </div>
-
-                {/* Service Radius Slider */}
-                <div>
-                  <Label>Service Radius: {serviceRadius[0]} km</Label>
-                  <div className="px-3 py-4">
-                    <Slider
-                      value={serviceRadius}
-                      onValueChange={setServiceRadius}
-                      max={50}
-                      min={5}
-                      step={5}
-                      className="w-full"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                      <span>5 km</span>
-                      <span>25 km</span>
-                      <span>50 km</span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Select how far you're willing to travel for deliveries
-                  </p>
                 </div>
               </div>
             )}
